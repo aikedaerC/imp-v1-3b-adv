@@ -100,11 +100,12 @@ def score(gt_json, px_json):
         one_asr = 0
         for k in gt[idx]['num'].keys():
             # num
-            one_asr += 0.5*((gt[idx]['num'][k] - px[idx]['num'][k])**2)
+            if gt[idx]['num'][k] != px[idx]['num'][k]:
+                one_asr += 34 #0.5*((gt[idx]['num'][k] - px[idx]['num'][k])**2)
             # color
             if gt[0]['num'][k] != 0:
                 if gt[idx]['color'][k] != px[idx]['color'][k]:
-                    one_asr += 0.5*1
+                    one_asr += 34
         asr += (one_asr)*(0.5+0.5*px[idx]['ssim'])
     avg_score = asr/total
     print(f"total score: {avg_score}")
@@ -124,5 +125,5 @@ if __name__ == "__main__":
     #     ssim_score = calculate_ssim(im1, im2)
     #     print(ssim_score.item())
     #     break
-    out_path = "/home/data/p2/0.935_41"
+    out_path = "/home/data/p2/0.935_41" #0.91_49"
     score("/home/data/labels_p2.json", os.path.join(out_path,"labels_p2.json"))

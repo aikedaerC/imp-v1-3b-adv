@@ -114,7 +114,7 @@ def parse_caption(caption):
     caption_dict = {pair.split(': ')[0]: pair.split(': ')[1] for pair in caption}
     return caption_dict
 
-def batch_transfer(gt_img_path, root_path,out_path,tokenizer):
+def batch_transfer(gt_img_path, img_path, out_path, js_name, tokenizer):
     os.makedirs(out_path, exist_ok=True)
     color_qs = "A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions. \
           USER: <image>\nWhat are the colors of the cars, persons, motorcycles, traffic lights and road signals in the image respectively, only one color in each class? \
@@ -124,7 +124,7 @@ def batch_transfer(gt_img_path, root_path,out_path,tokenizer):
               Give me the answer in this format: [cars: num1, persons: num2, motorcycles: num3, traffic lights: num4, road signals: num5] ASSISTANT:"   
     #"/content/images"
     json_data = []
-    img_list = os.listdir(root_path)
+    img_list = os.listdir(img_path)
     sorted_list = sorted(img_list, key=lambda x: int(x.split('.')[0]))
     # sorted_list = sorted_list[94:]
     count_except = 0
@@ -132,9 +132,9 @@ def batch_transfer(gt_img_path, root_path,out_path,tokenizer):
     while idx<len(sorted_list)-1:
         idx += 1
         print(f"Processing -------------------------------------------- {sorted_list[idx]} ------------------------------------------------")
-        color_q = process_one_task(color_qs, os.path.join(root_path,sorted_list[idx]),tokenizer)
-        num_q = process_one_task(num_qs, os.path.join(root_path,sorted_list[idx]),tokenizer)
-        ssim = process_one_ssim(os.path.join(gt_img_path,sorted_list[idx]), os.path.join(root_path,sorted_list[idx]))
+        color_q = process_one_task(color_qs, os.path.join(img_path,sorted_list[idx]),tokenizer)
+        num_q = process_one_task(num_qs, os.path.join(img_path,sorted_list[idx]),tokenizer)
+        ssim = process_one_ssim(os.path.join(gt_img_path,sorted_list[idx]), os.path.join(img_path,sorted_list[idx]))
         # import pdb;pdb.set_trace()
         try:
             color_q = parse_caption(color_q)
@@ -157,7 +157,7 @@ def batch_transfer(gt_img_path, root_path,out_path,tokenizer):
 
         if (idx % 50 == 0) or (idx==len(sorted_list)-1):
             json_string = json.dumps(json_data, indent=2)
-            with open(os.path.join(out_path,"labels_p2.json"), 'w') as file:
+            with open(os.path.join(out_path, js_name), 'w') as file:
                 file.write(json_string)
 
 
@@ -170,16 +170,22 @@ if __name__ == "__main__":
         trust_remote_code=True)
     tokenizer = AutoTokenizer.from_pretrained("MILVLG/imp-v1-3b", trust_remote_code=True)
 
-    # imp to json labels
-    gt_img_path = "/home/data/images"
-    gt_json_file = "/home/data/p2/0.935_41/labels_p2.json"
-    img_path = "/home/data/p2/0.935_41/images"
-    out_path = "/home/data/p2/0.935_41"
-    batch_transfer(gt_img_path, img_path, out_path, tokenizer)
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Example Argument Parser')
+    parser.add_argument('--gpath', type=str, default='/home/data', help='path')
+    parser.add_argument('--ipath', type=str, default='/home/data/p2/0.935_41', help='img_path')
+    # parser.add_argument('--opath', type=str, default='/home/data/p2/0.935_41', help='out_path')
+
+    args = parser.parse_args()
+
+    json_name = "labels_p2.json"
+
+    batch_transfer(os.path.join(args.gpath, "images"), os.path.join(args.ipath, "images"), args.ipath, json_name, tokenizer)
 
     # cal score
-    from score import score
-    avg_score = score("/home/data/labels_p2.json", os.path.join(out_path,"labels_p2.json"))
+    from myutils.score import score
+    avg_score = score(os.path.join(args.gpath, json_name), os.path.join(args.ipath, json_name))
 
     
     
